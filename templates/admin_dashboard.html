@@ -7,8 +7,28 @@
             <h1>{{ rifa.titulo }}</h1>
             {% if rifa.finalidade %}<p class="finalidade">{{ rifa.finalidade }}</p>{% endif %}
         </div>
-        <a href="{{ url_for('logout') }}" class="link-sair">Sair</a>
+        <div class="acoes-cabecalho">
+            <a href="{{ url_for('admin_criar') }}" class="botao-criar-rifa">+ Criar nova rifa</a>
+            <a href="{{ url_for('logout') }}" class="link-sair">Sair</a>
+        </div>
     </header>
+
+    {% if outras_rifas %}
+    <section class="bloco-link bloco-outras-rifas">
+        <label>Outras rifas ({{ outras_rifas | length }})</label>
+        <ul class="lista-outras-rifas">
+            {% for r in outras_rifas %}
+            <li>
+                <span class="nome-outra-rifa">{{ r.titulo }}{% if r.numero_sorteado %} <span class="etiqueta pago">sorteada</span>{% endif %}</span>
+                <form method="post" action="{{ url_for('ativar_rifa', rifa_id=r.id) }}">
+                    <button type="submit" class="botao-mini">Usar esta</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        <p class="dica-form">Trocar não apaga nenhuma rifa — os dados de todas ficam guardados, você só muda qual aparece aqui no painel.</p>
+    </section>
+    {% endif %}
 
     <section class="bloco-link">
         <label>Link para compartilhar com seus contatos</label>
@@ -115,8 +135,8 @@
     </section>
 
     <section class="bloco-encerrar">
-        <form method="post" action="{{ url_for('encerrar_rifa') }}" onsubmit="return confirm('Isso vai apagar esta rifa e todos os números. Deseja continuar?');">
-            <button type="submit" class="botao-perigo">Encerrar esta rifa e criar outra</button>
+        <form method="post" action="{{ url_for('encerrar_rifa') }}" onsubmit="return confirm('Isso vai apagar esta rifa e todos os números PERMANENTEMENTE. Deseja continuar?');">
+            <button type="submit" class="botao-perigo">Apagar esta rifa permanentemente</button>
         </form>
     </section>
 </div>

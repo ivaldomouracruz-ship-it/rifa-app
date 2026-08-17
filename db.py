@@ -117,7 +117,8 @@ def inicializar_banco():
             criado_em TEXT NOT NULL,
             data_sorteio TEXT,
             sorteado_em TEXT,
-            numero_sorteado INTEGER
+            numero_sorteado INTEGER,
+            ativa INTEGER DEFAULT 1
         )
     """)
     run("""
@@ -132,8 +133,16 @@ def inicializar_banco():
         )
     """)
     # Rifas criadas antes desta versão não têm essas colunas — adiciona se faltar.
-    for coluna in ("chave_pix TEXT", "data_sorteio TEXT", "sorteado_em TEXT", "numero_sorteado INTEGER"):
+    for coluna in ("chave_pix TEXT", "data_sorteio TEXT", "sorteado_em TEXT", "numero_sorteado INTEGER", "ativa INTEGER DEFAULT 1"):
         try:
             run(f"ALTER TABLE rifa ADD COLUMN {coluna}")
         except Exception:
             pass
+    # Rifas antigas que ficaram com ativa = NULL (banco criado antes desta coluna existir):
+    # marca a mais recente como ativa, o resto como inativa, pra não sumir da tela.
+    try:
+        pendentes = run("SELECT id FROM rifa WHERE ativa IS NULL ORDER BY id DESC")
+        for i, linha in enumerate(pendentes):
+            run("UPDATE rifa SET ativa = ? WHERE id = ?", [1 if i == 0 else 0, linha["id"]])
+    except Exception:
+        pass

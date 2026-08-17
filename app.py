@@ -37,8 +37,12 @@ def gerar_slug():
 
 
 def buscar_rifa_ativa():
-    linhas = db.run("SELECT * FROM rifa ORDER BY id DESC LIMIT 1")
+    linhas = db.run("SELECT * FROM rifa WHERE ativa = 1 ORDER BY id DESC LIMIT 1")
     return linhas[0] if linhas else None
+
+
+def buscar_todas_rifas():
+    return db.run("SELECT * FROM rifa ORDER BY id DESC")
 
 
 def buscar_rifa_por_slug(slug):
@@ -230,12 +234,15 @@ def admin_dashboard():
     )
     link_whatsapp = "https://wa.me/?text=" + quote(mensagem_whatsapp)
 
+    outras_rifas = [r for r in buscar_todas_rifas() if r["id"] != rifa["id"]]
+
     return render_template(
         "admin_dashboard.html", rifa=rifa, numeros=numeros, stats=stats,
         link_publico=link_publico, link_whatsapp=link_whatsapp,
         data_sorteio_br=formatar_data_br(rifa.get("data_sorteio")),
         pode_sortear=pode_sortear(rifa, numeros),
         ganhador=buscar_ganhador(rifa, numeros),
+        outras_rifas=outras_rifas,
     )
 
 
@@ -265,9 +272,10 @@ def admin_criar():
         if not erro:
             slug = gerar_slug()
             try:
+                db.run("UPDATE rifa SET ativa = 0")
                 db.run(
-                    """INSERT INTO rifa (titulo, finalidade, valor_numero, qtd_numeros, chave_pix, data_sorteio, slug, criado_em)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    """INSERT INTO rifa (titulo, finalidade, valor_numero, qtd_numeros, chave_pix, data_sorteio, slug, criado_em, ativa)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)""",
                     [titulo, finalidade, valor_numero, qtd_numeros, chave_pix, data_sorteio, slug, datetime.now(timezone.utc).isoformat()],
                 )
                 rifa = buscar_rifa_por_slug(slug)
@@ -339,6 +347,14 @@ def liberar_numero(numero_id):
            telefone_comprador = NULL, reservado_em = NULL WHERE id = ?""",
         [numero_id],
     )
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/ativar/<int:rifa_id>", methods=["POST"])
+@login_obrigatorio
+def ativar_rifa(rifa_id):
+    db.run("UPDATE rifa SET ativa = 0")
+    db.run("UPDATE rifa SET ativa = 1 WHERE id = ?", [rifa_id])
     return redirect(url_for("admin_dashboard"))
 
 
