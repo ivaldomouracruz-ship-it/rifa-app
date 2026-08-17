@@ -20,13 +20,26 @@ def _turso_http_url():
     return url.rstrip("/") + "/v2/pipeline"
 
 
+def _valor_turso(a):
+    """Converte um valor Python para o formato de argumento esperado pela API do Turso.
+    Importante: 'integer' vai como string, mas 'float' vai como número mesmo — misturar
+    os dois formatos faz o Turso rejeitar o pedido e devolver erro 500."""
+    if a is None:
+        return {"type": "null"}
+    if isinstance(a, bool):
+        return {"type": "integer", "value": str(int(a))}
+    if isinstance(a, int):
+        return {"type": "integer", "value": str(a)}
+    if isinstance(a, float):
+        return {"type": "float", "value": a}
+    return {"type": "text", "value": str(a)}
+
+
 def _run_turso(sql, args=None):
     """Executa um único statement via API HTTP do Turso (compatível com o plano free do PythonAnywhere,
     que bloqueia conexões nativas libsql e só libera HTTP/HTTPS)."""
     args = args or []
-    turso_args = [{"type": "text", "value": str(a)} if not isinstance(a, (int, float)) else
-                  {"type": "integer" if isinstance(a, int) else "float", "value": str(a)}
-                  for a in args]
+    turso_args = [_valor_turso(a) for a in args]
     payload = {
         "requests": [
             {"type": "execute", "stmt": {"sql": sql, "args": turso_args}},

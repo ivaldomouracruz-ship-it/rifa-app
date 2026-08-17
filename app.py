@@ -192,18 +192,21 @@ def admin_criar():
 
         if not erro:
             slug = gerar_slug()
-            db.run(
-                """INSERT INTO rifa (titulo, finalidade, valor_numero, qtd_numeros, slug, criado_em)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                [titulo, finalidade, valor_numero, qtd_numeros, slug, datetime.now(timezone.utc).isoformat()],
-            )
-            rifa = buscar_rifa_por_slug(slug)
-            for i in range(1, qtd_numeros + 1):
+            try:
                 db.run(
-                    "INSERT INTO numero (rifa_id, numero, status) VALUES (?, ?, 'disponivel')",
-                    [rifa["id"], i],
+                    """INSERT INTO rifa (titulo, finalidade, valor_numero, qtd_numeros, slug, criado_em)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    [titulo, finalidade, valor_numero, qtd_numeros, slug, datetime.now(timezone.utc).isoformat()],
                 )
-            return redirect(url_for("admin_dashboard"))
+                rifa = buscar_rifa_por_slug(slug)
+                for i in range(1, qtd_numeros + 1):
+                    db.run(
+                        "INSERT INTO numero (rifa_id, numero, status) VALUES (?, ?, 'disponivel')",
+                        [rifa["id"], i],
+                    )
+                return redirect(url_for("admin_dashboard"))
+            except Exception as e:
+                erro = f"Não foi possível salvar no banco de dados: {e}"
 
     return render_template("admin_criar.html", erro=erro)
 
