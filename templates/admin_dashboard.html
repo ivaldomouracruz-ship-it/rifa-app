@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block titulo %}Painel — {{ rifa.titulo }}{% endblock %}
+{% block conteudo %}
+<div class="pagina-admin">
+    <header class="cabecalho-admin">
+        <div>
+            <h1>{{ rifa.titulo }}</h1>
+            {% if rifa.finalidade %}<p class="finalidade">{{ rifa.finalidade }}</p>{% endif %}
+        </div>
+        <a href="{{ url_for('logout') }}" class="link-sair">Sair</a>
+    </header>
+
+    <section class="bloco-link">
+        <label>Link para compartilhar com seus contatos</label>
+        <div class="campo-copiar">
+            <input type="text" id="input-link" value="{{ link_publico }}" readonly>
+            <button type="button" id="btn-copiar">Copiar</button>
+        </div>
+    </section>
+
+    <section class="resumo-cards">
+        <div class="card-resumo disponivel"><span class="qtd">{{ stats.disponiveis }}</span><span class="rotulo">Disponíveis</span></div>
+        <div class="card-resumo reservado"><span class="qtd">{{ stats.reservados }}</span><span class="rotulo">Reservados</span></div>
+        <div class="card-resumo pago"><span class="qtd">{{ stats.pagos }}</span><span class="rotulo">Pagos</span></div>
+        <div class="card-resumo arrecadado">
+            <span class="qtd">R$ {{ "%.2f"|format(stats.arrecadado)|replace(".", ",") }}</span>
+            <span class="rotulo">Arrecadado de R$ {{ "%.2f"|format(stats.potencial)|replace(".", ",") }}</span>
+        </div>
+    </section>
+
+    <section class="bloco-tabela">
+        <h2>Reservas e pagamentos</h2>
+        {% set ocupados = numeros | selectattr("status", "ne", "disponivel") | list %}
+        {% if not ocupados %}
+        <p class="vazio">Nenhum número foi escolhido ainda.</p>
+        {% else %}
+        <table class="tabela-numeros">
+            <thead>
+                <tr><th>Nº</th><th>Nome</th><th>Telefone</th><th>Status</th><th>Ações</th></tr>
+            </thead>
+            <tbody>
+                {% for n in ocupados %}
+                <tr>
+                    <td>{{ "%02d"|format(n.numero) }}</td>
+                    <td>{{ n.nome_comprador or "-" }}</td>
+                    <td>{{ n.telefone_comprador or "-" }}</td>
+                    <td><span class="etiqueta {{ n.status }}">{{ "Pago" if n.status == "pago" else "Reservado" }}</span></td>
+                    <td class="acoes">
+                        {% if n.status == "reservado" %}
+                        <form method="post" action="{{ url_for('marcar_pago', numero_id=n.id) }}">
+                            <button type="submit" class="botao-mini pago">Marcar pago</button>
+                        </form>
+                        {% endif %}
+                        <form method="post" action="{{ url_for('liberar_numero', numero_id=n.id) }}">
+                            <button type="submit" class="botao-mini liberar" onclick="return confirm('Liberar este número novamente?');">Liberar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </section>
+
+    <section class="bloco-encerrar">
+        <form method="post" action="{{ url_for('encerrar_rifa') }}" onsubmit="return confirm('Isso vai apagar esta rifa e todos os números. Deseja continuar?');">
+            <button type="submit" class="botao-perigo">Encerrar esta rifa e criar outra</button>
+        </form>
+    </section>
+</div>
+
+<script>
+document.getElementById("btn-copiar").addEventListener("click", () => {
+    const input = document.getElementById("input-link");
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        const btn = document.getElementById("btn-copiar");
+        const original = btn.textContent;
+        btn.textContent = "Copiado!";
+        setTimeout(() => { btn.textContent = original; }, 1500);
+    });
+});
+</script>
+{% endblock %}

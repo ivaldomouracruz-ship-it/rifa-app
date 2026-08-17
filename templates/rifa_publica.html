@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block titulo %}{{ rifa.titulo }} — Rifa{% endblock %}
+{% block conteudo %}
+<div class="pagina-publica">
+    <header class="cabecalho-rifa">
+        <h1>{{ rifa.titulo }}</h1>
+        {% if rifa.finalidade %}<p class="finalidade">{{ rifa.finalidade }}</p>{% endif %}
+        <p class="valor-destaque">Cada número: <strong>R$ {{ "%.2f"|format(rifa.valor_numero)|replace(".", ",") }}</strong></p>
+    </header>
+
+    <section class="resumo-cards" id="resumo-cards">
+        <div class="card-resumo disponivel">
+            <span class="qtd" id="qtd-disponiveis">{{ stats.disponiveis }}</span>
+            <span class="rotulo">Disponíveis</span>
+        </div>
+        <div class="card-resumo reservado">
+            <span class="qtd" id="qtd-reservados">{{ stats.reservados }}</span>
+            <span class="rotulo">Reservados</span>
+        </div>
+        <div class="card-resumo pago">
+            <span class="qtd" id="qtd-pagos">{{ stats.pagos }}</span>
+            <span class="rotulo">Pagos</span>
+        </div>
+    </section>
+
+    <div class="legenda">
+        <span><i class="bolinha disponivel"></i> Disponível</span>
+        <span><i class="bolinha reservado"></i> Reservado</span>
+        <span><i class="bolinha pago"></i> Pago</span>
+    </div>
+
+    <div class="grade-numeros" id="grade-numeros">
+        {% for n in numeros %}
+        <button type="button" class="numero {{ n.status }}" data-numero="{{ n.numero }}" data-status="{{ n.status }}">
+            {{ "%02d"|format(n.numero) }}
+        </button>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="modal-fundo" id="modal-fundo">
+    <div class="modal">
+        <h2>Reservar número <span id="modal-numero"></span></h2>
+        <p class="modal-aviso">O número fica reservado e o organizador confirma o pagamento em seguida.</p>
+        <form id="form-reserva">
+            <label>Seu nome
+                <input type="text" id="input-nome" required maxlength="80">
+            </label>
+            <label>WhatsApp / telefone
+                <input type="tel" id="input-telefone" required maxlength="20" placeholder="(00) 00000-0000">
+            </label>
+            <p class="erro-form" id="erro-form"></p>
+            <div class="modal-botoes">
+                <button type="button" class="botao-secundario" id="btn-cancelar">Cancelar</button>
+                <button type="submit" class="botao-primario">Confirmar reserva</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const SLUG = {{ rifa.slug | tojson }};
+const grade = document.getElementById("grade-numeros");
+const modalFundo = document.getElementById("modal-fundo");
+const modalNumero = document.getElementById("modal-numero");
+const form = document.getElementById("form-reserva");
+const erroForm = document.getElementById("erro-form");
+let numeroSelecionado = null;
+
+function abrirModal(numero) {
+    numeroSelecionado = numero;
+    modalNumero.textContent = "#" + String(numero).padStart(2, "0");
+    erroForm.textContent = "";
+    form.reset();
+    modalFundo.classList.add("aberto");
+}
+
+function fecharModal() {
+    modalFundo.classList.remove("aberto");
+    numeroSelecionado = null;
+}
+
+grade.addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".numero");
+    if (!btn) return;
+    if (btn.dataset.status !== "disponivel") return;
+    abrirModal(Number(btn.dataset.numero));
+});
+
+document.getElementById("btn-cancelar").addEventListener("click", fecharModal);
+modalFundo.addEventListener("click", (ev) => { if (ev.target === modalFundo) fecharModal(); });
+
+form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    erroForm.textContent = "";
+    const nome = document.getElementById("input-nome").value.trim();
+    const telefone = document.getElementById("input-telefone").value.trim();
+    try {
+        const resp = await fetch(`/api/r/${SLUG}/reservar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ numero: numeroSelecionado, nome, telefone }),
+        });
+        const data = await resp.json();
+        if (!data.ok) {
+            erroForm.textContent = data.erro || "Não foi possível reservar. Tente novamente.";
+            return;
+        }
+        fecharModal();
+        atualizarCartela();
+    } catch (e) {
+        erroForm.textContent = "Erro de conexão. Tente novamente.";
+    }
+});
+
+async function atualizarCartela() {
+    try {
+        const resp = await fetch(`/api/r/${SLUG}/status`);
+        const data = await resp.json();
+        data.numeros.forEach((n) => {
+            const btn = grade.querySelector(`[data-numero="${n.numero}"]`);
+            if (!btn) return;
+            if (btn.dataset.status !== n.status) {
+                btn.dataset.status = n.status;
+                btn.className = "numero " + n.status;
+            }
+        });
+        document.getElementById("qtd-disponiveis").textContent = data.stats.disponiveis;
+        document.getElementById("qtd-reservados").textContent = data.stats.reservados;
+        document.getElementById("qtd-pagos").textContent = data.stats.pagos;
+    } catch (e) { /* silencioso — tenta de novo no próximo ciclo */ }
+}
+
+setInterval(atualizarCartela, 5000);
+</script>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}Criar rifa{% endblock %}
+{% block conteudo %}
+<div class="pagina-central">
+    <form class="cartao-form" method="post">
+        <h1>Criar nova rifa</h1>
+        {% if erro %}<p class="erro-form">{{ erro }}</p>{% endif %}
+        <label>Título da rifa
+            <input type="text" name="titulo" required maxlength="120" placeholder="Ex.: Rifa beneficente">
+        </label>
+        <label>Finalidade
+            <textarea name="finalidade" maxlength="300" placeholder="Ex.: Ajudar nas despesas do tratamento de..."></textarea>
+        </label>
+        <label>Valor por número (R$)
+            <input type="text" name="valor_numero" required placeholder="Ex.: 10,00">
+        </label>
+        <label>Quantidade de números
+            <input type="number" name="qtd_numeros" required min="1" max="5000" placeholder="Ex.: 200">
+        </label>
+        <button type="submit" class="botao-primario">Criar rifa e gerar link</button>
+    </form>
+</div>
+{% endblock %}
