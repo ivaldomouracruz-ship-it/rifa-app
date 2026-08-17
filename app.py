@@ -125,10 +125,9 @@ def buscar_ganhador(rifa, numeros):
 
 @app.route("/")
 def index():
-    rifa = buscar_rifa_ativa()
-    if not rifa:
-        return redirect(url_for("login"))
-    return redirect(url_for("rifa_publica", slug=rifa["slug"]))
+    if session.get("admin_logado"):
+        return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("login"))
 
 
 @app.route("/r/<slug>")
