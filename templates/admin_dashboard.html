@@ -16,6 +16,36 @@
             <input type="text" id="input-link" value="{{ link_publico }}" readonly>
             <button type="button" id="btn-copiar">Copiar</button>
         </div>
+        <div class="linha-botoes">
+            <a href="{{ link_whatsapp }}" target="_blank" rel="noopener" class="botao-whatsapp">
+                Enviar pelo WhatsApp
+            </a>
+            <a href="{{ link_publico }}" target="_blank" rel="noopener" class="botao-ver-cartela">
+                Ver cartela
+            </a>
+        </div>
+    </section>
+
+    <section class="bloco-link">
+        <label>Chave Pix para receber os pagamentos</label>
+        <form class="campo-copiar" method="post" action="{{ url_for('definir_pix') }}">
+            <input type="text" name="chave_pix" value="{{ rifa.chave_pix or '' }}" placeholder="CPF, e-mail, telefone ou chave aleatória" maxlength="140">
+            <button type="submit">Salvar</button>
+        </form>
+        {% if not rifa.chave_pix %}
+        <p class="dica-form">Sem chave Pix cadastrada, os participantes não verão como pagar na página pública.</p>
+        {% endif %}
+    </section>
+
+    <section class="bloco-link">
+        <label>Data do sorteio</label>
+        <form class="campo-copiar" method="post" action="{{ url_for('definir_sorteio') }}">
+            <input type="date" name="data_sorteio" value="{{ rifa.data_sorteio or '' }}">
+            <button type="submit">Salvar</button>
+        </form>
+        {% if data_sorteio_br %}
+        <p class="dica-form">Sorteio marcado para {{ data_sorteio_br }} — os participantes já veem essa data na página pública.</p>
+        {% endif %}
     </section>
 
     <section class="resumo-cards">

@@ -35,6 +35,20 @@ def _valor_turso(a):
     return {"type": "text", "value": str(a)}
 
 
+def _valor_python(cell):
+    """Converte uma célula devolvida pelo Turso de volta para o tipo Python correto.
+    A API HTTP do Turso devolve número inteiro e decimal como texto dentro do JSON —
+    sem essa conversão, campos como 'numero' (INTEGER) chegam como string '3' em vez
+    de 3, o que quebra qualquer formatação numérica no template (ex.: %02d)."""
+    if not cell or cell.get("type") == "null":
+        return None
+    if cell["type"] == "integer":
+        return int(cell["value"])
+    if cell["type"] == "float":
+        return float(cell["value"])
+    return cell.get("value")
+
+
 def _run_turso(sql, args=None):
     """Executa um único statement via API HTTP do Turso (compatível com o plano free do PythonAnywhere,
     que bloqueia conexões nativas libsql e só libera HTTP/HTTPS)."""
@@ -64,7 +78,7 @@ def _run_turso(sql, args=None):
     for raw_row in result.get("rows", []):
         row = {}
         for col, cell in zip(cols, raw_row):
-            row[col] = cell.get("value") if cell else None
+            row[col] = _valor_python(cell)
         rows.append(row)
     return rows
 
@@ -98,8 +112,10 @@ def inicializar_banco():
             finalidade TEXT,
             valor_numero REAL NOT NULL,
             qtd_numeros INTEGER NOT NULL,
+            chave_pix TEXT,
             slug TEXT UNIQUE NOT NULL,
             criado_em TEXT NOT NULL,
+            data_sorteio TEXT,
             sorteado_em TEXT,
             numero_sorteado INTEGER
         )
@@ -115,3 +131,9 @@ def inicializar_banco():
             reservado_em TEXT
         )
     """)
+    # Rifas criadas antes desta versão não têm essas colunas — adiciona se faltar.
+    for coluna in ("chave_pix TEXT", "data_sorteio TEXT"):
+        try:
+            run(f"ALTER TABLE rifa ADD COLUMN {coluna}")
+        except Exception:
+            pass

@@ -6,6 +6,7 @@
         <h1>{{ rifa.titulo }}</h1>
         {% if rifa.finalidade %}<p class="finalidade">{{ rifa.finalidade }}</p>{% endif %}
         <p class="valor-destaque">Cada número: <strong>R$ {{ "%.2f"|format(rifa.valor_numero)|replace(".", ",") }}</strong></p>
+        {% if data_sorteio_br %}<p class="data-sorteio">Sorteio em {{ data_sorteio_br }}</p>{% endif %}
     </header>
 
     <section class="resumo-cards" id="resumo-cards">
@@ -27,7 +28,19 @@
         <span><i class="bolinha disponivel"></i> Disponível</span>
         <span><i class="bolinha reservado"></i> Reservado</span>
         <span><i class="bolinha pago"></i> Pago</span>
+        <button type="button" id="btn-atualizar" class="botao-atualizar">↻ Atualizar números</button>
     </div>
+
+    {% if rifa.chave_pix %}
+    <section class="bloco-link">
+        <label>Chave Pix para pagamento</label>
+        <div class="campo-copiar">
+            <input type="text" id="pix-cartela" value="{{ rifa.chave_pix }}" readonly>
+            <button type="button" id="btn-copiar-pix-cartela">Copiar</button>
+        </div>
+        <p class="dica-form">Reserve seu número e pague usando essa chave. O organizador confirma o pagamento em seguida.</p>
+    </section>
+    {% endif %}
 
     <div class="grade-numeros" id="grade-numeros">
         {% for n in numeros %}
@@ -58,10 +71,29 @@
     </div>
 </div>
 
+<div class="modal-fundo" id="modal-sucesso">
+    <div class="modal">
+        <h2>Número reservado! 🎉</h2>
+        {% if rifa.chave_pix %}
+        <p class="modal-aviso">Agora é só pagar via Pix com a chave abaixo e pronto.</p>
+        <div class="campo-copiar">
+            <input type="text" id="pix-sucesso" value="{{ rifa.chave_pix }}" readonly>
+            <button type="button" id="btn-copiar-pix-sucesso">Copiar</button>
+        </div>
+        {% else %}
+        <p class="modal-aviso">O organizador vai entrar em contato para combinar o pagamento.</p>
+        {% endif %}
+        <div class="modal-botoes">
+            <button type="button" class="botao-primario" id="btn-fechar-sucesso">Entendi</button>
+        </div>
+    </div>
+</div>
+
 <script>
 const SLUG = {{ rifa.slug | tojson }};
 const grade = document.getElementById("grade-numeros");
 const modalFundo = document.getElementById("modal-fundo");
+const modalSucesso = document.getElementById("modal-sucesso");
 const modalNumero = document.getElementById("modal-numero");
 const form = document.getElementById("form-reserva");
 const erroForm = document.getElementById("erro-form");
@@ -89,6 +121,8 @@ grade.addEventListener("click", (ev) => {
 
 document.getElementById("btn-cancelar").addEventListener("click", fecharModal);
 modalFundo.addEventListener("click", (ev) => { if (ev.target === modalFundo) fecharModal(); });
+document.getElementById("btn-fechar-sucesso").addEventListener("click", () => modalSucesso.classList.remove("aberto"));
+modalSucesso.addEventListener("click", (ev) => { if (ev.target === modalSucesso) modalSucesso.classList.remove("aberto"); });
 
 form.addEventListener("submit", async (ev) => {
     ev.preventDefault();
@@ -107,13 +141,32 @@ form.addEventListener("submit", async (ev) => {
             return;
         }
         fecharModal();
+        modalSucesso.classList.add("aberto");
         atualizarCartela();
     } catch (e) {
         erroForm.textContent = "Erro de conexão. Tente novamente.";
     }
 });
 
+function copiar(inputId, botaoId) {
+    const input = document.getElementById(inputId);
+    const botao = document.getElementById(botaoId);
+    if (!input || !botao) return;
+    botao.addEventListener("click", () => {
+        input.select();
+        navigator.clipboard.writeText(input.value).then(() => {
+            const original = botao.textContent;
+            botao.textContent = "Copiado!";
+            setTimeout(() => { botao.textContent = original; }, 1500);
+        });
+    });
+}
+copiar("pix-cartela", "btn-copiar-pix-cartela");
+copiar("pix-sucesso", "btn-copiar-pix-sucesso");
+
 async function atualizarCartela() {
+    const btnAtualizar = document.getElementById("btn-atualizar");
+    if (btnAtualizar) btnAtualizar.textContent = "↻ Atualizando...";
     try {
         const resp = await fetch(`/api/r/${SLUG}/status`);
         const data = await resp.json();
@@ -128,9 +181,13 @@ async function atualizarCartela() {
         document.getElementById("qtd-disponiveis").textContent = data.stats.disponiveis;
         document.getElementById("qtd-reservados").textContent = data.stats.reservados;
         document.getElementById("qtd-pagos").textContent = data.stats.pagos;
-    } catch (e) { /* silencioso — tenta de novo no próximo ciclo */ }
+    } catch (e) { /* silencioso — tenta de novo no próximo ciclo */
+    } finally {
+        if (btnAtualizar) btnAtualizar.textContent = "↻ Atualizar números";
+    }
 }
 
+document.getElementById("btn-atualizar").addEventListener("click", atualizarCartela);
 setInterval(atualizarCartela, 5000);
 </script>
 {% endblock %}

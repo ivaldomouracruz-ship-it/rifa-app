@@ -11,12 +11,19 @@
         <label>Finalidade
             <textarea name="finalidade" maxlength="300" placeholder="Ex.: Ajudar nas despesas do tratamento de..."></textarea>
         </label>
+        <label>Chave Pix para receber os pagamentos
+            <input type="text" name="chave_pix" maxlength="140" placeholder="CPF, e-mail, telefone ou chave aleatória">
+        </label>
+        <label>Data do sorteio
+            <input type="date" name="data_sorteio">
+        </label>
         <label>Valor por número (R$)
             <input type="text" name="valor_numero" required placeholder="Ex.: 10,00">
         </label>
         <label>Quantidade de números
             <input type="number" name="qtd_numeros" required min="1" max="5000" placeholder="Ex.: 200">
         </label>
+        <p class="dica-form">Você pode deixar a chave Pix em branco agora e preencher depois no painel.</p>
         <button type="submit" class="botao-primario">Criar rifa e gerar link</button>
     </form>
 </div>

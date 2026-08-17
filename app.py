@@ -3,6 +3,7 @@ import secrets
 import string
 from datetime import datetime, timezone
 from functools import wraps
+from urllib.parse import quote
 
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, abort
 
@@ -64,6 +65,15 @@ def estatisticas(rifa, numeros):
     }
 
 
+def formatar_data_br(data_iso):
+    if not data_iso:
+        return None
+    try:
+        return datetime.strptime(data_iso, "%Y-%m-%d").strftime("%d/%m/%Y")
+    except ValueError:
+        return data_iso
+
+
 # ---------------------------------------------------------------------------
 # Rotas públicas
 # ---------------------------------------------------------------------------
@@ -83,7 +93,10 @@ def rifa_publica(slug):
         abort(404)
     numeros = buscar_numeros(rifa["id"])
     stats = estatisticas(rifa, numeros)
-    return render_template("rifa_publica.html", rifa=rifa, numeros=numeros, stats=stats)
+    return render_template(
+        "rifa_publica.html", rifa=rifa, numeros=numeros, stats=stats,
+        data_sorteio_br=formatar_data_br(rifa.get("data_sorteio")),
+    )
 
 
 @app.route("/api/r/<slug>/status")
@@ -164,8 +177,19 @@ def admin_dashboard():
     numeros = buscar_numeros(rifa["id"])
     stats = estatisticas(rifa, numeros)
     link_publico = url_for("rifa_publica", slug=rifa["slug"], _external=True)
+
+    mensagem_whatsapp = (
+        f"🎟️ *{rifa['titulo']}*\n"
+        f"{rifa['finalidade'] or ''}\n"
+        f"Cada número: R$ {rifa['valor_numero']:.2f}".replace(".", ",") + "\n\n"
+        f"Escolha seu número aqui: {link_publico}"
+    )
+    link_whatsapp = "https://wa.me/?text=" + quote(mensagem_whatsapp)
+
     return render_template(
-        "admin_dashboard.html", rifa=rifa, numeros=numeros, stats=stats, link_publico=link_publico
+        "admin_dashboard.html", rifa=rifa, numeros=numeros, stats=stats,
+        link_publico=link_publico, link_whatsapp=link_whatsapp,
+        data_sorteio_br=formatar_data_br(rifa.get("data_sorteio")),
     )
 
 
@@ -176,6 +200,8 @@ def admin_criar():
     if request.method == "POST":
         titulo = (request.form.get("titulo") or "").strip()
         finalidade = (request.form.get("finalidade") or "").strip()
+        chave_pix = (request.form.get("chave_pix") or "").strip()
+        data_sorteio = (request.form.get("data_sorteio") or "").strip()
         valor_numero = request.form.get("valor_numero", "").replace(",", ".")
         qtd_numeros = request.form.get("qtd_numeros", "")
 
@@ -194,9 +220,9 @@ def admin_criar():
             slug = gerar_slug()
             try:
                 db.run(
-                    """INSERT INTO rifa (titulo, finalidade, valor_numero, qtd_numeros, slug, criado_em)
-                       VALUES (?, ?, ?, ?, ?, ?)""",
-                    [titulo, finalidade, valor_numero, qtd_numeros, slug, datetime.now(timezone.utc).isoformat()],
+                    """INSERT INTO rifa (titulo, finalidade, valor_numero, qtd_numeros, chave_pix, data_sorteio, slug, criado_em)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    [titulo, finalidade, valor_numero, qtd_numeros, chave_pix, data_sorteio, slug, datetime.now(timezone.utc).isoformat()],
                 )
                 rifa = buscar_rifa_por_slug(slug)
                 for i in range(1, qtd_numeros + 1):
@@ -215,6 +241,26 @@ def admin_criar():
 @login_obrigatorio
 def marcar_pago(numero_id):
     db.run("UPDATE numero SET status = 'pago' WHERE id = ?", [numero_id])
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/pix", methods=["POST"])
+@login_obrigatorio
+def definir_pix():
+    rifa = buscar_rifa_ativa()
+    if rifa:
+        chave_pix = (request.form.get("chave_pix") or "").strip()
+        db.run("UPDATE rifa SET chave_pix = ? WHERE id = ?", [chave_pix, rifa["id"]])
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/sorteio", methods=["POST"])
+@login_obrigatorio
+def definir_sorteio():
+    rifa = buscar_rifa_ativa()
+    if rifa:
+        data_sorteio = (request.form.get("data_sorteio") or "").strip()
+        db.run("UPDATE rifa SET data_sorteio = ? WHERE id = ?", [data_sorteio, rifa["id"]])
     return redirect(url_for("admin_dashboard"))
 
 

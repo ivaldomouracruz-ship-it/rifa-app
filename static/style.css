@@ -41,6 +41,7 @@ h2 { font-size: 1.1rem; color: var(--cor-primaria); }
 .cabecalho-rifa h1 { color: white; }
 .cabecalho-rifa .finalidade { opacity: 0.9; margin: 6px 0 14px; }
 .cabecalho-rifa .valor-destaque { margin: 0; font-size: 1.1rem; }
+.cabecalho-rifa .data-sorteio { margin: 10px 0 0; font-size: 0.85rem; opacity: 0.85; }
 
 .resumo-cards {
     display: grid;
@@ -67,6 +68,7 @@ h2 { font-size: 1.1rem; color: var(--cor-primaria); }
     display: flex;
     gap: 16px;
     justify-content: center;
+    align-items: center;
     font-size: 0.82rem;
     color: var(--cor-texto-suave);
     margin-bottom: 14px;
@@ -78,6 +80,50 @@ h2 { font-size: 1.1rem; color: var(--cor-primaria); }
     border-radius: 50%;
     margin-right: 5px;
 }
+.botao-atualizar {
+    margin-left: auto;
+    border: 1px solid var(--cor-borda);
+    background: white;
+    color: var(--cor-primaria);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.botao-atualizar:hover { background: var(--cor-fundo); }
+.dica-form { font-size: 0.8rem; color: var(--cor-texto-suave); margin: 8px 0 0; }
+.botao-whatsapp {
+    display: inline-block;
+    margin-top: 10px;
+    background: #25d366;
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 10px 16px;
+    border-radius: 8px;
+    text-align: center;
+    width: 100%;
+}
+.botao-whatsapp:hover { background: #1ebd59; }
+.linha-botoes { display: flex; gap: 8px; margin-top: 10px; }
+.linha-botoes .botao-whatsapp { margin-top: 0; flex: 1; }
+.botao-ver-cartela {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    background: var(--cor-primaria);
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 10px 16px;
+    border-radius: 8px;
+    text-align: center;
+}
+.botao-ver-cartela:hover { background: var(--cor-primaria-clara); }
 .bolinha.disponivel, .numero.disponivel { background: var(--cor-disponivel); }
 .bolinha.reservado, .numero.reservado { background: var(--cor-reservado); }
 .bolinha.pago, .numero.pago { background: var(--cor-pago); }
