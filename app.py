@@ -364,6 +364,16 @@ def encerrar_rifa():
     if rifa:
         db.run("DELETE FROM numero WHERE rifa_id = ?", [rifa["id"]])
         db.run("DELETE FROM rifa WHERE id = ?", [rifa["id"]])
+
+    # Se ainda sobrou alguma outra rifa cadastrada, ativa a mais recente
+    # e volta para o Dashboard. Só vai para a tela de criação se não
+    # existir mais nenhuma rifa no banco.
+    restantes = buscar_todas_rifas()
+    if restantes:
+        db.run("UPDATE rifa SET ativa = 0")
+        db.run("UPDATE rifa SET ativa = 1 WHERE id = ?", [restantes[0]["id"]])
+        return redirect(url_for("admin_dashboard"))
+
     return redirect(url_for("admin_criar"))
 
 
