@@ -38,13 +38,35 @@
     </section>
 
     <section class="bloco-link">
-        <label>Data do sorteio</label>
+        <label>Data e horário do sorteio</label>
         <form class="campo-copiar" method="post" action="{{ url_for('definir_sorteio') }}">
-            <input type="date" name="data_sorteio" value="{{ rifa.data_sorteio or '' }}">
-            <button type="submit">Salvar</button>
+            <input type="datetime-local" name="data_sorteio" value="{{ rifa.data_sorteio or '' }}" {% if rifa.numero_sorteado %}disabled{% endif %}>
+            <button type="submit" {% if rifa.numero_sorteado %}disabled{% endif %}>Salvar</button>
         </form>
-        {% if data_sorteio_br %}
+        {% if data_sorteio_br and not rifa.numero_sorteado %}
         <p class="dica-form">Sorteio marcado para {{ data_sorteio_br }} — os participantes já veem essa data na página pública.</p>
+        {% endif %}
+    </section>
+
+    <section class="bloco-link bloco-sorteio">
+        {% if ganhador %}
+        <div class="banner-ganhador">
+            <span class="banner-titulo">🏆 Rifa sorteada!</span>
+            <span class="banner-detalhe">Número <strong>{{ "%02d"|format(ganhador.numero) }}</strong> — {{ ganhador.nome or "sem nome cadastrado" }}</span>
+            {% if data_sorteio_br %}<span class="banner-data">Sorteio realizado em {{ data_sorteio_br }}</span>{% endif %}
+        </div>
+        {% else %}
+        <label>Sorteio automático</label>
+        <form method="post" action="{{ url_for('sortear') }}" onsubmit="return confirm('Realizar o sorteio agora? Essa ação não pode ser desfeita.');">
+            <button type="submit" class="botao-sortear" {% if not pode_sortear %}disabled{% endif %}>🎲 Realizar sorteio</button>
+        </form>
+        {% if not rifa.data_sorteio %}
+        <p class="dica-form">Defina a data e o horário do sorteio acima para habilitar o botão.</p>
+        {% elif not pode_sortear %}
+        <p class="dica-form">O botão será liberado automaticamente em {{ data_sorteio_br }}, e só se houver pelo menos um número pago.</p>
+        {% else %}
+        <p class="dica-form">Tudo pronto — o sorteio já pode ser realizado. Apenas números marcados como "Pago" concorrem.</p>
+        {% endif %}
         {% endif %}
     </section>
 

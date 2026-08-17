@@ -6,8 +6,15 @@
         <h1>{{ rifa.titulo }}</h1>
         {% if rifa.finalidade %}<p class="finalidade">{{ rifa.finalidade }}</p>{% endif %}
         <p class="valor-destaque">Cada número: <strong>R$ {{ "%.2f"|format(rifa.valor_numero)|replace(".", ",") }}</strong></p>
-        {% if data_sorteio_br %}<p class="data-sorteio">Sorteio em {{ data_sorteio_br }}</p>{% endif %}
+        {% if not ganhador and data_sorteio_br %}<p class="data-sorteio">Sorteio em {{ data_sorteio_br }}</p>{% endif %}
     </header>
+
+    {% if ganhador %}
+    <div class="banner-ganhador banner-ganhador-publico">
+        <span class="banner-titulo">🏆 Rifa sorteada!</span>
+        <span class="banner-detalhe">Número vencedor: <strong>{{ "%02d"|format(ganhador.numero) }}</strong> — {{ ganhador.nome or "sem nome cadastrado" }}</span>
+    </div>
+    {% endif %}
 
     <section class="resumo-cards" id="resumo-cards">
         <div class="card-resumo disponivel">
@@ -42,9 +49,9 @@
     </section>
     {% endif %}
 
-    <div class="grade-numeros" id="grade-numeros">
+    <div class="grade-numeros {% if ganhador %}encerrada{% endif %}" id="grade-numeros">
         {% for n in numeros %}
-        <button type="button" class="numero {{ n.status }}" data-numero="{{ n.numero }}" data-status="{{ n.status }}">
+        <button type="button" class="numero {{ n.status }} {% if n.numero == ganhador.numero %}sorteado{% endif %}" data-numero="{{ n.numero }}" data-status="{{ n.status }}">
             {{ "%02d"|format(n.numero) }}
         </button>
         {% endfor %}
@@ -112,7 +119,10 @@ function fecharModal() {
     numeroSelecionado = null;
 }
 
+const RIFA_ENCERRADA = {{ "true" if ganhador else "false" }};
+
 grade.addEventListener("click", (ev) => {
+    if (RIFA_ENCERRADA) return;
     const btn = ev.target.closest(".numero");
     if (!btn) return;
     if (btn.dataset.status !== "disponivel") return;
@@ -188,6 +198,8 @@ async function atualizarCartela() {
 }
 
 document.getElementById("btn-atualizar").addEventListener("click", atualizarCartela);
-setInterval(atualizarCartela, 5000);
+if (!RIFA_ENCERRADA) {
+    setInterval(atualizarCartela, 5000);
+}
 </script>
 {% endblock %}

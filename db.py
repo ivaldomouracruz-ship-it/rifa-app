@@ -132,7 +132,7 @@ def inicializar_banco():
         )
     """)
     # Rifas criadas antes desta versão não têm essas colunas — adiciona se faltar.
-    for coluna in ("chave_pix TEXT", "data_sorteio TEXT"):
+    for coluna in ("chave_pix TEXT", "data_sorteio TEXT", "sorteado_em TEXT", "numero_sorteado INTEGER"):
         try:
             run(f"ALTER TABLE rifa ADD COLUMN {coluna}")
         except Exception:

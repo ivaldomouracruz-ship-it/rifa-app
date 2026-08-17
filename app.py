@@ -1,9 +1,11 @@
 import os
+import random
 import secrets
 import string
 from datetime import datetime, timezone
 from functools import wraps
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, abort
 
@@ -13,6 +15,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "troque-esta-senha")
+FUSO_BR = ZoneInfo("America/Sao_Paulo")
 
 
 # ---------------------------------------------------------------------------
@@ -68,10 +71,48 @@ def estatisticas(rifa, numeros):
 def formatar_data_br(data_iso):
     if not data_iso:
         return None
+    for formato_entrada, formato_saida in (
+        ("%Y-%m-%dT%H:%M", "%d/%m/%Y às %Hh%M"),
+        ("%Y-%m-%d", "%d/%m/%Y"),
+    ):
+        try:
+            return datetime.strptime(data_iso, formato_entrada).strftime(formato_saida)
+        except ValueError:
+            continue
+    return data_iso
+
+
+def agora_br():
+    return datetime.now(FUSO_BR).replace(tzinfo=None)
+
+
+def data_sorteio_dt(rifa):
+    """Converte o campo data_sorteio (texto) da rifa em datetime, ou None se ausente/ inválido."""
+    valor = rifa.get("data_sorteio")
+    if not valor:
+        return None
     try:
-        return datetime.strptime(data_iso, "%Y-%m-%d").strftime("%d/%m/%Y")
+        return datetime.strptime(valor, "%Y-%m-%dT%H:%M")
     except ValueError:
-        return data_iso
+        return None
+
+
+def pode_sortear(rifa, numeros):
+    if rifa.get("numero_sorteado"):
+        return False
+    dt = data_sorteio_dt(rifa)
+    if dt is None or agora_br() < dt:
+        return False
+    return any(n["status"] == "pago" for n in numeros)
+
+
+def buscar_ganhador(rifa, numeros):
+    if not rifa.get("numero_sorteado"):
+        return None
+    vencedor = next((n for n in numeros if n["numero"] == rifa["numero_sorteado"]), None)
+    if not vencedor:
+        return None
+    return {"numero": vencedor["numero"], "nome": vencedor["nome_comprador"]}
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +137,7 @@ def rifa_publica(slug):
     return render_template(
         "rifa_publica.html", rifa=rifa, numeros=numeros, stats=stats,
         data_sorteio_br=formatar_data_br(rifa.get("data_sorteio")),
+        ganhador=buscar_ganhador(rifa, numeros),
     )
 
 
@@ -118,6 +160,8 @@ def api_reservar(slug):
     rifa = buscar_rifa_por_slug(slug)
     if not rifa:
         abort(404)
+    if rifa.get("numero_sorteado"):
+        return jsonify({"ok": False, "erro": "Esta rifa já foi sorteada e não aceita mais reservas."}), 403
 
     dados = request.get_json(force=True, silent=True) or {}
     numero = dados.get("numero")
@@ -190,6 +234,8 @@ def admin_dashboard():
         "admin_dashboard.html", rifa=rifa, numeros=numeros, stats=stats,
         link_publico=link_publico, link_whatsapp=link_whatsapp,
         data_sorteio_br=formatar_data_br(rifa.get("data_sorteio")),
+        pode_sortear=pode_sortear(rifa, numeros),
+        ganhador=buscar_ganhador(rifa, numeros),
     )
 
 
@@ -261,6 +307,27 @@ def definir_sorteio():
     if rifa:
         data_sorteio = (request.form.get("data_sorteio") or "").strip()
         db.run("UPDATE rifa SET data_sorteio = ? WHERE id = ?", [data_sorteio, rifa["id"]])
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/admin/sortear", methods=["POST"])
+@login_obrigatorio
+def sortear():
+    rifa = buscar_rifa_ativa()
+    if not rifa:
+        return redirect(url_for("admin_criar"))
+    numeros = buscar_numeros(rifa["id"])
+    if not pode_sortear(rifa, numeros):
+        # Botão só fica habilitado quando as condições são satisfeitas; se chegou aqui
+        # mesmo assim (ex.: F5 tardio), ignora silenciosamente e volta pro painel.
+        return redirect(url_for("admin_dashboard"))
+
+    pagos = [n for n in numeros if n["status"] == "pago"]
+    sorteado = random.choice(pagos)
+    db.run(
+        "UPDATE rifa SET numero_sorteado = ?, sorteado_em = ? WHERE id = ?",
+        [sorteado["numero"], datetime.now(timezone.utc).isoformat(), rifa["id"]],
+    )
     return redirect(url_for("admin_dashboard"))
 
 

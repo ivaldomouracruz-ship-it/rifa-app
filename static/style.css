@@ -246,3 +246,50 @@ input:focus, textarea:focus { outline: none; border-color: var(--cor-primaria-cl
     .grade-numeros { grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); }
     .cabecalho-admin { flex-direction: column; gap: 8px; }
 }
+
+/* Sorteio automático */
+.botao-sortear {
+    display: block;
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    background: var(--cor-primaria);
+    color: white;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.botao-sortear:hover:not(:disabled) { background: var(--cor-primaria-clara); }
+.botao-sortear:disabled {
+    background: var(--cor-borda);
+    color: var(--cor-texto-suave);
+    cursor: not-allowed;
+}
+
+.banner-ganhador {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px;
+    border-radius: var(--raio);
+    background: linear-gradient(135deg, #fff9db, #ffec99);
+    border: 1px solid #ffd43b;
+    text-align: center;
+}
+.banner-titulo { font-size: 1.1rem; font-weight: 700; color: var(--cor-primaria); }
+.banner-detalhe { font-size: 0.95rem; color: var(--cor-texto); }
+.banner-data { font-size: 0.8rem; color: var(--cor-texto-suave); }
+.banner-ganhador-publico { margin-bottom: 16px; }
+
+.numero.sorteado {
+    outline: 3px solid #f5b400;
+    box-shadow: 0 0 0 3px #fff9db;
+    font-weight: 700;
+}
+
+.grade-numeros.encerrada .numero.disponivel {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
